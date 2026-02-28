@@ -1,12 +1,28 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
-
 version: '3'
 
-vars:
-  GREETING: Hello, world!
-
 tasks:
+  dev:
+    desc: Run all apps in development mode
+    cmd: npm run dev
+    silent: true
+
   web:
-    desc: Run Web Application Server
-    cmd: cd ./web && bun run dev && cd ../
+    desc: Run Web Application only
+    cmd: npm run dev --workspace=apps/web
+    silent: true
+
+  server:
+    desc: Run Server only
+    cmd: npm run dev --workspace=apps/server
+    silent: true
+
+  build:
+    desc: Build all apps
+    cmd: npm run build
+    silent: true
+
+  lint:
+    desc: Lint all apps
+    cmd: npm run lint
     silent: true
