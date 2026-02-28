@@ -1,7 +1,9 @@
 {
   "name": "wos-ally-manager",
   "private": true,
-  "workspaces": ["apps/*"],
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
@@ -12,10 +14,12 @@
     "turbo": "^2.3.3",
     "prettier": "^3.3.3",
     "prettier-plugin-svelte": "^3.2.6",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vite": "^6.0.5"
   },
   "overrides": {
     "serialize-javascript": "7.0.3",
-    "cookie": "^0.7.0"
+    "cookie": "^0.7.0",
+    "esbuild": "^0.25.0"
   }
 }

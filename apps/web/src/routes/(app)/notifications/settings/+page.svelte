@@ -1,16 +1,18 @@
 <script lang="ts">
-  import { getGlobalPrefs, setGlobalPref, getEventPrefs, setEventPref } from '$lib/api/notifications.js';
+  import { getGlobalPrefs, setGlobalPref, getEventPrefs, setEventPref, subscribeToPush, unsubscribeFromPush } from '$lib/api/notifications.js';
   import type { GlobalPref, EventPref, NotificationChannel } from '$lib/api/notifications.js';
   import { listEvents } from '$lib/api/events.js';
   import type { Event } from '$lib/api/events.js';
   import Card from '$components/ui/Card.svelte';
   import Toggle from '$components/ui/Toggle.svelte';
   import Badge from '$components/ui/Badge.svelte';
+  import Button from '$components/ui/Button.svelte';
   import { DAY_SHORT } from '$lib/api/events.js';
   import { formatTime } from '$lib/utils.js';
 
   const CHANNELS: { key: NotificationChannel; icon: string; label: string }[] = [
     { key: 'inapp', icon: '📱', label: 'In-App' },
+    { key: 'push', icon: '🔔', label: 'Push (background)' },
     { key: 'discord', icon: '💬', label: 'Discord' },
     { key: 'telegram', icon: '✈️', label: 'Telegram' },
     { key: 'email', icon: '📧', label: 'Email' },
@@ -20,12 +22,37 @@
   let eventPrefs = $state<EventPref[]>([]);
   let events = $state<Event[]>([]);
   let loading = $state(true);
+  let pushSubscribed = $state(false);
+  let pushLoading = $state(false);
 
   $effect(() => {
     Promise.all([getGlobalPrefs(), getEventPrefs(), listEvents()])
       .then(([g, e, ev]) => { globalPrefs = g; eventPrefs = e; events = ev; loading = false; })
       .catch(() => { loading = false; });
+
+    // Check current push subscription state
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      navigator.serviceWorker.ready.then(reg =>
+        reg.pushManager.getSubscription().then(sub => { pushSubscribed = !!sub; })
+      );
+    }
   });
+
+  async function togglePush() {
+    pushLoading = true;
+    try {
+      if (pushSubscribed) {
+        await unsubscribeFromPush();
+        pushSubscribed = false;
+      } else {
+        const ok = await Notification.requestPermission().then(p => p === 'granted');
+        if (!ok) { alert('Please allow notifications in your browser settings.'); return; }
+        pushSubscribed = await subscribeToPush();
+      }
+    } finally {
+      pushLoading = false;
+    }
+  }
 
   function getGlobalPref(channel: NotificationChannel): boolean {
     const p = globalPrefs.find(g => g.channel === channel);
@@ -94,6 +121,31 @@
   {#if loading}
     <div class="text-center py-12 text-muted-foreground">Loading settings...</div>
   {:else}
+    <!-- Web Push subscription (battery-safe: server pushes, no polling) -->
+    <section class="space-y-3">
+      <h2 class="text-lg font-semibold">Background Push Notifications</h2>
+      <Card class="p-4">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <div class="font-medium text-sm">🔔 Enable Push Notifications</div>
+            <div class="text-xs text-muted-foreground mt-0.5">
+              Receive alerts even when the app is closed. Uses Web Push — zero battery drain.
+            </div>
+          </div>
+          <Button
+            variant={pushSubscribed ? 'destructive' : 'default'}
+            size="sm"
+            loading={pushLoading}
+            onclick={togglePush}
+          >
+            {pushSubscribed ? 'Disable' : 'Enable'}
+          </Button>
+        </div>
+        {#if pushSubscribed}
+          <p class="text-xs text-success mt-3">✓ Push notifications are active on this device.</p>
+        {/if}
+      </Card>
+    </section>
     <!-- Global Settings -->
     <section class="space-y-3">
       <h2 class="text-lg font-semibold">Global Channels</h2>
