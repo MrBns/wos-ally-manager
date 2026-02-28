@@ -24,6 +24,7 @@
   let loading = $state(true);
   let pushSubscribed = $state(false);
   let pushLoading = $state(false);
+  let pushError = $state('');
 
   $effect(() => {
     Promise.all([getGlobalPrefs(), getEventPrefs(), listEvents()])
@@ -46,7 +47,7 @@
         pushSubscribed = false;
       } else {
         const ok = await Notification.requestPermission().then(p => p === 'granted');
-        if (!ok) { alert('Please allow notifications in your browser settings.'); return; }
+        if (!ok) { pushError = 'Please allow notifications in your browser settings.'; return; }
         pushSubscribed = await subscribeToPush();
       }
     } finally {

@@ -7,7 +7,8 @@ import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 
 declare const self: ServiceWorkerGlobalScope;
 
-// Injected by VitePWA at build time
+// self.__WB_MANIFEST is injected by VitePWA (InjectManifest strategy) at build time.
+// In development mode with devOptions.enabled=true it resolves to [].
 const WB_MANIFEST = self.__WB_MANIFEST;
 precacheAndRoute(WB_MANIFEST);
 cleanupOutdatedCaches();
@@ -51,7 +52,10 @@ registerRoute(
 self.addEventListener('push', (event) => {
   if (!event.data) return;
   let data: { title?: string; body?: string; url?: string } = {};
-  try { data = event.data.json(); } catch { data = { title: 'WOS Ally', body: event.data.text() }; }
+  try { data = event.data.json(); } catch (e) {
+    console.warn('[SW] Failed to parse push payload', e);
+    data = { title: 'WOS Ally', body: event.data.text() };
+  }
 
   const title = data.title ?? 'WOS Ally Manager';
   const options: NotificationOptions = {
